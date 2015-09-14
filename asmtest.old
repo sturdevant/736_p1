@@ -1,0 +1,40 @@
+#include<stdio.h>
+#include<time.h>
+
+#define RUN_COUNT 10
+
+int main(int argc, char** argv) {
+
+	long t_asm[RUN_COUNT];
+	int t1, t2, t3, t4;
+	int i;
+	for (i = 0; i < RUN_COUNT; i++) {
+		asm("rdtsc; mov %%eax, %0;":"=r"(t1));
+		asm(       "mov %%edx, %0;":"=r"(t2));
+		asm("rdtsc; mov %%eax, %0;":"=r"(t3));
+		asm(       "mov %%edx, %0;":"=r"(t4));
+		t[i] = (t4 - t2) << 32 + t3 - t1
+	}
+	struct timespec xl[RUN_COUNT];
+	for (i = 0; i < RUN_COUNT; i++) {
+		clock_gettime(CLOCK_MONOTONIC, &xl[i]);
+	}
+	for (i = 1; i < RUN_COUNT; i++) {
+		printf("xl = %ld\n", xl[i].tv_nsec - xl[i - 1].tv_nsec);
+	}
+	struct timeval xl[RUN_COUNT];
+	for (i = 0; i < RUN_COUNT; i++) {
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &xl[i]);
+	}
+	for (i = 1; i < RUN_COUNT; i++) {
+		printf("xl = %ld\n", xl[i].tv_nsec - xl[i - 1].tv_nsec);
+	}
+	struct timeval xl[RUN_COUNT];
+	for (i = 0; i < RUN_COUNT; i++) {
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &xl[i]);
+	}
+	for (i = 1; i < RUN_COUNT; i++) {
+		printf("xl = %ld\n", xl[i].tv_nsec - xl[i - 1].tv_nsec);
+	}	
+	return 0;
+}
