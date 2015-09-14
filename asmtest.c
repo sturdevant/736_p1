@@ -16,7 +16,6 @@
 
 
 
-
 #define THREAD_CREATE_TIMING_SETUP_OPERATIONS \
 pthread_t p;\
 volatile int x;\
