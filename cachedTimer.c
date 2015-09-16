@@ -10,9 +10,10 @@
 
 void* time_self() {
    int t1, t2, t3, t4;
+   volatile int x;
    asm("rdtscp; mov %%eax, %0;":"=a"(t1));
    asm(        "mov %%edx, %0;":"=a"(t2));
-   pthread_self();
+   x = pthread_self();
    asm("rdtscp; mov %%eax, %0;":"=a"(t3));
    asm(        "mov %%edx, %0;":"=a"(t4));
 
