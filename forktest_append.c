@@ -10,7 +10,7 @@
 
 int main(int argc, char** argv) {
    int i, fork_res, wait_stat;
-   double result[RUN_COUNT];
+   double result;
 
    for (i = 0; i < RUN_COUNT; i++) {
       double start = TIMER_START;
@@ -21,14 +21,13 @@ int main(int argc, char** argv) {
          exit(0);
       }
       double stop = TIMER_STOP;
-      result[i] = stop - start;
+      result = stop - start;
+      if (i == 0) {
+         array_to_csv(&result, 1, "forktest_app.csv");
+      } else {
+         append_csv(result, "forktest_app.csv");
+      }
    }
-
-   double res_min = array_min(result, RUN_COUNT);
-   printf("Forktest min: %lf\n", res_min);
-   printf("Forktest # of mins: %d", occur_of(result, RUN_COUNT, res_min));
-
-   array_to_csv(result, RUN_COUNT, "forktest.csv");
 
    return 0;
 }

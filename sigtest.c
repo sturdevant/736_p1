@@ -9,19 +9,19 @@
 
 #define RUN_COUNT 10000
 
-long* g_cur_result;
+double* g_cur_result;
 
 void child_handler(int sig, siginfo_t* info, void* arg) {
    kill(info->si_pid, SIGUSR1);
 }
 
 void parent_handler(int sig, signifo_t* info, void* arg) {
-   volatile int 
+   (*g_cur_result) = TIMER_STOP;
 }
 
 int main(int argc, char** argv) {
    int i, fork_res, wait_stat;
-   long result[RUN_COUNT];
+   double result[RUN_COUNT];
 
    fork_res = fork();
    if (fork_res == 0) {
@@ -40,15 +40,15 @@ int main(int argc, char** argv) {
    sigaction(SIGUSR1, sa, NULL);
    g_cur_result = result;
    for (i = 0; i < RUN_COUNT; i++) {
-      g_cur_result++;
-      TIMER_START
-      kill();
+      double start = TIMER_START;
+      kill(fork_res, SIGUSR1);
       pause();
-      result[i]-= 1; // Replace with actual value later.
+      result[i]-= start; // Replace with actual value later.
+      g_cur_result++;
    }
 
-   long res_min = array_min(result, RUN_COUNT);
-   printf("Sigtest min: %ld\n", res_min);
+   double res_min = array_min(result, RUN_COUNT);
+   printf("Sigtest min: %lf\n", res_min);
    printf("Sigtest # of mins: %d", occur_of(result, RUN_COUNT, res_min));
 
    array_to_csv(result, RUN_COUNT, "sigtest.csv");

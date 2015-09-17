@@ -8,37 +8,54 @@
 #include<pthread.h>
 #include"output.h"
 #include"arrays.h"
+#include"timers.h"
 
-#define RUN_COUNT 200000
+#define RUN_COUNT 250000
+#define MAX_LOOP_SIZE 100
 #define TIMER_COUNT 6
 
-#define OPERATIONS_TO_TIME  
+#define OPERATIONS_TO_TIME \
+int lv; \
+volatile int x; \
+for (lv = 0; lv < g_n_loops; lv++) \
+   x = 0;
+
+volatile int g_n_loops;
 
 // Forward declarations for each of the timer functions.
-long asm_base();
-long asm_base_for();
-long asm_cold();
-long asm_hot();
-long mono_cold();
-long mono_hot();
+double asm_base();
+double asm_base_for();
+double asm_cold();
+double asm_hot();
+double mono_cold();
+double mono_hot();
 
 int main(int argc, char** argv) {
 	
-	long t_result[TIMER_COUNT][RUN_COUNT];
-	long (*timer_func[TIMER_COUNT])(void);
-	timer_func[0] = &asm_base;
-	timer_func[1] = &asm_base_for;
-	timer_func[2] = &asm_cold;
-  	timer_func[3] = &asm_hot;
+   double t_result[TIMER_COUNT][RUN_COUNT];
+   double (*timer_func[TIMER_COUNT])(void);
+   timer_func[0] = &asm_base;
+   timer_func[1] = &asm_base_for;
+   timer_func[2] = &asm_cold;
+   timer_func[3] = &asm_hot;
    timer_func[4] = &mono_cold;
    timer_func[5] = &mono_hot;
-	int i, j;
+   int i, j;
 
-	for (i = 0; i < TIMER_COUNT; i++) {
-		for (j = 0; j < RUN_COUNT; j++) {
-			t_result[i][j] = timer_func[i]();
-		}
-	}
+   g_n_loops = 0;
+   for (i = 0; i < RUN_COUNT; i++) {
+
+
+      // Increment up the number of loops being timed.
+      if (i % (RUN_COUNT / MAX_LOOP_SIZE) == 0 && i > 0) {
+         g_n_loops++;
+         printf("Min result for %d = %lf\n", g_n_loops, array_min(&t_result[0][i - RUN_COUNT/MAX_LOOP_SIZE + 1], RUN_COUNT/MAX_LOOP_SIZE - 1));
+      }
+
+      for (j = 0; j < TIMER_COUNT; j++) {
+         t_result[j][i] = timer_func[j]();
+      }
+   }
 
    array_to_csv(t_result[0], RUN_COUNT, "asm_base.csv");
    array_to_csv(t_result[1], RUN_COUNT, "asm_base_for.csv");
@@ -48,119 +65,60 @@ int main(int argc, char** argv) {
    array_to_csv(t_result[5], RUN_COUNT, "mono_hot.csv");
 
    for (i = 0; i < TIMER_COUNT; i++) {
-      printf("Min #%d = %ld\n", i, array_min(&t_result[i][0], RUN_COUNT));
+      printf("Min #%d = %lf\n", i, array_min(&t_result[i][0], RUN_COUNT));
    }
-
-
-	return 0;
+   return 0;
 }
 
 // Our original timer function without proper serialization
-long asm_base() {
-	int t1, t2, t3, t4;
-	asm("rdtscp; mov %%eax, %0;":"=a"(t1));
-	asm(        "mov %%edx, %0;":"=a"(t2));
-	OPERATIONS_TO_TIME
-	asm("rdtscp; mov %%eax, %0;":"=a"(t3));
-	asm(        "mov %%edx, %0;":"=a"(t4));
-	return ((long)(t4 - t2) << 32) + t3 - t1;
+double asm_base() {
+   double start = asm_hot_start();
+   OPERATIONS_TO_TIME
+   double stop = asm_hot_stop();
+   return stop - start;
 }
 
 // Our original timer with a trailing for loop to show unordered execution
-long asm_base_for() {
-	int t1, t2, t3, t4;
-	asm("rdtscp; mov %%eax, %0;":"=a"(t1));
-	asm(        "mov %%edx, %0;":"=a"(t2));
-	OPERATIONS_TO_TIME
-	asm("rdtscp; mov %%eax, %0;":"=a"(t3));
-	asm(        "mov %%edx, %0;":"=a"(t4));
+double asm_base_for() {
+   double start = asm_base_for_start();
+   OPERATIONS_TO_TIME
+   double stop = asm_base_for_stop();
    volatile int i;
    volatile int j;
    for (i = 0; i < 5; i++) {
       j = i;
    }
-   return ((long)(t4 - t2) << 32) + t3 - t1;
+   return stop - start;
 }
 
 // The suggested Intel timer with proper serialization and a cold cache
-long asm_cold() {
-	int t1, t2, t3, t4;
-   asm("CPUID;" 
-	    "rdtsc;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-      :"=r"(t1), "=r"(t2)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-	OPERATIONS_TO_TIME
-   asm("rdtscp;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-       "cpuid;"
-      :"=r"(t3), "=r"(t4)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-	return ((long)(t4 - t2) << 32) + t3 - t1;
+double asm_cold() {
+   double start = asm_cold_start();
+   OPERATIONS_TO_TIME
+   double stop = asm_cold_stop();
+   return stop - start;
 }
 
 // The suggested Intel timer with proper serialization and a warm cache
-long asm_hot() {
-	int t1, t2, t3, t4;
-   asm("CPUID;" 
-	    "rdtsc;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-      :"=r"(t1), "=r"(t2)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-   asm("rdtscp;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-       "cpuid;"
-      :"=r"(t3), "=r"(t4)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-	asm("CPUID;" 
-	    "rdtsc;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-      :"=r"(t1), "=r"(t2)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-   asm("rdtscp;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-       "cpuid;"
-      :"=r"(t3), "=r"(t4)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-	asm("CPUID;" 
-	    "rdtsc;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-      :"=r"(t1), "=r"(t2)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-	OPERATIONS_TO_TIME
-   asm("rdtscp;"
-       "mov %%eax, %0;"
-       "mov %%edx, %1;"
-       "cpuid;"
-      :"=r"(t3), "=r"(t4)
-     ::"%eax", "%ebx", "%ecx", "%edx");
-	return (((long)(t4 - t2) << 32) + t3 - t1);
+double asm_hot() {
+   double start = asm_hot_start();
+   OPERATIONS_TO_TIME
+   double stop = asm_hot_stop();
+   return stop - start;
 }
 
-
 // The monotonic timer in NS, to compete with the asm strategies (cold cache).
-long mono_cold() {
-   struct timespec temp_ts_1, temp_ts_2;
-   clock_gettime(CLOCK_MONOTONIC, &temp_ts_1);
+double mono_cold() {
+   double start = mono_cold_start();
    OPERATIONS_TO_TIME
-   clock_gettime(CLOCK_MONOTONIC, &temp_ts_2);
-   return (temp_ts_2.tv_nsec - temp_ts_1.tv_nsec) * 3.392227000; 
+   double stop = mono_cold_stop();
+   return stop - start;
 }
 
 // The monotonic timer in NS, to compete with the asm strategies (warm cache).
-long mono_hot() {
-   struct timespec temp_ts_1, temp_ts_2;
-   clock_gettime(CLOCK_MONOTONIC, &temp_ts_1);
-   clock_gettime(CLOCK_MONOTONIC, &temp_ts_1);
-   clock_gettime(CLOCK_MONOTONIC, &temp_ts_1);
+double mono_hot() {
+   double start = mono_hot_start();
    OPERATIONS_TO_TIME
-   clock_gettime(CLOCK_MONOTONIC, &temp_ts_2);
-   return (temp_ts_2.tv_nsec - temp_ts_1.tv_nsec) * 3.392227000; 
+   double stop = mono_hot_stop();
+   return stop - start;
 }
