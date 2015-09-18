@@ -6,7 +6,7 @@
 #include<unistd.h>
 #include<pthread.h>
 
-#define RUN_COUNT 100
+#define RUN_COUNT 40
 
 void* time_self() {
    int t1, t2, t3, t4;
@@ -14,6 +14,8 @@ void* time_self() {
    asm("rdtscp; mov %%eax, %0;":"=a"(t1));
    asm(        "mov %%edx, %0;":"=a"(t2));
    x = pthread_self();
+//   x = pthread_self();
+//   x = pthread_self();
    asm("rdtscp; mov %%eax, %0;":"=a"(t3));
    asm(        "mov %%edx, %0;":"=a"(t4));
 
@@ -38,8 +40,9 @@ int main(int argc, const char* argv[]) {
       printf("%ld\n",(long)result);
    }
    
+
    /* Alternatively, we can try this, although I was a bit hesitant given that
-    * they each get the same thread ID...*/
+    * they each get the same thread ID...
 
    printf("One Thread At A Time: \n");
    pthread_t p1;
@@ -48,6 +51,6 @@ int main(int argc, const char* argv[]) {
       pthread_create(&p1, NULL, &time_self, NULL);
       pthread_join(p1, &result);
       printf("%ld\n",(long)result);
-   }
+   }*/
    return(0);
 }
