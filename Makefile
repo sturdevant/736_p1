@@ -15,3 +15,6 @@ cachedTimer:
 
 sigtest:
 	$(CC) -c -o sigtest.o sigtest.c $(CFLAGS)
+
+clean:
+	rm -rf *.o
