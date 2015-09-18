@@ -13,8 +13,5 @@ forktest:
 cachedTimer:
 	$(CC) -c -o cachedTimer.o cachedTimer.c $(CFLAGS)
 
-sigtest:
-	$(CC) -c -o sigtest.o sigtest.c $(CFLAGS)
-
 clean:
 	rm -rf *.o
