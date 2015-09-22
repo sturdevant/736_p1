@@ -16,7 +16,7 @@ with open(infile, 'rb') as csvfile:
         for n in row:
             data.append(float(n))
 
-#Split data into quartiles
+# Split data into quartiles
 data = np.array(data)
 quartiles = np.percentile(data, np.arange(0, 100, 25))
 iqr = quartiles[3] - quartiles[1]
@@ -32,6 +32,8 @@ data = blah
 index = range(len(data))
 
 # Plot run number vs time
+plt.title(infile)
+plt.xlabel("Run Number")
+plt.ylabel("Time (ns)")
 plt.plot(index, data)
 plt.show()
-

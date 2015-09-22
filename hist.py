@@ -29,5 +29,8 @@ for d in data:
 data = blah
 
 # Plot in a histogram!
+plt.title(infile)
+plt.xlabel("Time (ns)")
+plt.ylabel("Count")
 n, bins, patches = plt.hist(data, int(max(data)))
 plt.show()
