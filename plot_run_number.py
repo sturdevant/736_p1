@@ -17,23 +17,25 @@ with open(infile, 'rb') as csvfile:
             data.append(float(n))
 
 # Split data into quartiles
-data = np.array(data)
-quartiles = np.percentile(data, np.arange(0, 100, 25))
+new_data = np.array(data)
+quartiles = np.percentile(new_data, np.arange(0, 100, 25))
 iqr = quartiles[3] - quartiles[1]
 
 # Remove outliers (1.5 above IQR)
 blah = []
 for d in data:
+    print curIndex
     if d < 1.5*iqr + quartiles[3]:
         blah.append(d)
 data = blah
 
 # Number the runs
-index = range(len(data))
+index = range(len(blah))
 
 # Plot run number vs time
 plt.title(infile)
 plt.xlabel("Run Number")
+plt.xlim([0, max(index)])
 plt.ylabel("Time (ns)")
-plt.plot(index, data)
+plt.plot(index, blah)
 plt.show()
