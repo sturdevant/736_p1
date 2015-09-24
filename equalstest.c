@@ -1,21 +1,18 @@
-#include<stdio.h>
-#include<time.h>
-#include<sys/time.h>
-#include<sys/resource.h>
-#include<sys/types.h>
-#include<unistd.h>
-#include<pthread.h>
 #include "timers.h"
-#include "arrays.h"
-#include "output.h"
 
 #define RUN_COUNT 10000
 
+
+/*
+ * Our child function. It will write its result out to the location specified
+ * by arg. Note: it calls pthread_self first, so pthread_equals has valid args
+ * and so it has made a thread call, in case that changes timing.
+ */
 void* time_self(void* arg) {
    int res;
    double* res_ptr = (double*)arg;
    pthread_t p = pthread_self();
-
+   res = pthread_equal(0, 0);
    double start = TIMER_START;
    res = pthread_equal(p, p);
    double stop = TIMER_STOP;
@@ -24,42 +21,28 @@ void* time_self(void* arg) {
    return NULL;
 }
 
+/*
+ * Creates RUN_COUNT threads, 1 at a time and has each record the time to call
+ * pthread_equal.
+ */
 int main(int argc, const char* argv[]) {
-   double many_results[RUN_COUNT];
-   double single_results[RUN_COUNT];   
+   double results[RUN_COUNT];   
    int i;
    
-   /* An array of pthread, giving them each a unique ID, shouldn't be able to
-      cache */
-   printf("Many Threads At A Time: \n");
-   pthread_t p[RUN_COUNT];
-   for (i = 0; i < RUN_COUNT; i++) {
-      pthread_create(&p[i], NULL, &time_self, &many_results[i]);
-   }
-
-   for (i = 0; i < RUN_COUNT; i++) {
-      pthread_join(p[i], NULL);
-   }
-
-   array_to_csv(many_results, RUN_COUNT, "many_equals.csv");
-   double res_min = array_min(many_results, RUN_COUNT);
-   printf("Min = %lf\nMin count = %d\n", res_min, occur_of(many_results, RUN_COUNT, res_min));
-   
-   /* Alternatively, we can try this, although I was a bit hesitant given that
-    * they each get the same thread ID...*/
-
-   printf("One Thread At A Time: \n");
+   /* I was a bit hesitant given that they each get the same thread ID...*/
    pthread_t p1;
 
+   // Create threads one at a time and pass them a pointer to record their
+   // results.
    for (i = 0; i < RUN_COUNT; i++) {
-      pthread_create(&p1, NULL, &time_self, (void*)&single_results[i]);
+      pthread_create(&p1, NULL, &time_self, (void*)&results[i]);
       pthread_join(p1, NULL);
    }
 
-   array_to_csv(single_results, RUN_COUNT, "single_equals.csv");
-   res_min = array_min(single_results, RUN_COUNT);
-   printf("Min = %lf\nMin count = %d\n", res_min, occur_of(single_results, RUN_COUNT, res_min));
-   
+   // Print the results to a csv and the minimum to the console.
+   array_to_csv(results, RUN_COUNT, "equals.csv");
+   double res_min = array_min(results, RUN_COUNT);
+   printf("Min = %lf\nMin count = %d\n", res_min, occur_of(results, RUN_COUNT, res_min));
 
    return(0);
 }

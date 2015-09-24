@@ -7,17 +7,22 @@
 #include "arrays.h"
 #include "output.h"
 
-#define RUN_COUNT 10
-#define DELAY_COUNT 100000
+#define RUN_COUNT 10000
+#define DELAY_COUNT 20000000
 double* g_cur_result;
 int parent_pid;
+int parent_continue = 0;
 
 void child_handler(int sig, siginfo_t* info, void* arg) {
    kill(parent_pid, SIGUSR1);
+   //printf("Child sig sent...\n");
+   return;
 }
 
 void parent_handler(int sig, siginfo_t* info, void* arg) {
    (*g_cur_result) = TIMER_STOP;
+   parent_continue = 1;
+   return;
 }
 
 int main(int argc, char** argv) {
@@ -29,12 +34,8 @@ int main(int argc, char** argv) {
    if (fork_res == 0) {
       struct sigaction sa;
       sa.sa_sigaction = &child_handler;
-
-      sigaction(SIGUSR1, &sa, NULL);
-
-      while(1) {
-         pause();
-      }
+      sigaction(SIGUSR2, &sa, NULL);
+      while(1); // The child will remain suspended.
       printf("Error: child exited while loop!\n");
    }
 
@@ -47,17 +48,21 @@ int main(int argc, char** argv) {
    g_cur_result = result;
    for (i = 0; i < RUN_COUNT; i++) {
       double start = TIMER_START;
-      kill(fork_res, SIGUSR1);
-      pause();
-      result[i]-= start; // Replace with actual value later.
+      kill(fork_res, SIGUSR2);
+
+      // Wait until the handler has been called.
+      while (!parent_continue); // Do nothing.
+      parent_continue = 0;
+      result[i]-= start; // The handler put the end value here already.
       g_cur_result++;
    }
 
    double res_min = array_min(result, RUN_COUNT);
    printf("Sigtest min: %lf\n", res_min);
-   printf("Sigtest # of mins: %d", occur_of(result, RUN_COUNT, res_min));
 
    array_to_csv(result, RUN_COUNT, "sigtest.csv");
 
+   // We're done with the child, so stop them from running.
+   kill(fork_res, SIGKILL);
    return 0;
 }

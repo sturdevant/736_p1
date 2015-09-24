@@ -1,16 +1,8 @@
-#include<stdio.h>
-#include<time.h>
-#include<sys/time.h>
-#include<sys/resource.h>
-#include<sys/types.h>
-#include<unistd.h>
-#include<pthread.h>
-#include "timers.h"
-#include "arrays.h"
-#include "output.h"
+#include"timers.h"
 
-#define RUN_COUNT 200000
+#define RUN_COUNT 10000
 
+// A trivial child thread which does nothing but exit.
 void* exit_self(void* arg) {
    pthread_exit(NULL);
    return NULL;
@@ -26,6 +18,8 @@ int main(int argc, const char* argv[]) {
    pthread_t p1;
 
    for (i = 0; i < RUN_COUNT; i++) {
+
+      // Time the creation and joining with a thread.
       double start = TIMER_START;
       pthread_create(&p1, NULL, &exit_self, NULL);
       pthread_join(p1, NULL);

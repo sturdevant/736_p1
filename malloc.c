@@ -1,34 +1,32 @@
-#include<stdio.h>
-#include<time.h>
-#include<sys/time.h>
-#include<sys/resource.h>
-#include<sys/types.h>
-#include<unistd.h>
-#include<stdlib.h>
-#include<pthread.h>
-#include "timers.h"
-#include "arrays.h"
-#include "output.h"
+#include"timers.h"
 
-#define PAGES 800
+// The number of pages to run the test on. Its size is limited by the huge page
+// size of the machine, which is 512 pages. At a number higher than this, the
+// processor will bring in 512 pages at once, giving artifically low access
+// times because there wont be any faulting for those pages.
+#define PAGES 500
 
-void* exit_self(void* arg) {
-   pthread_exit(NULL);
-   return NULL;
-}
-
+// We will allocate a large array of ints, PAGES + 1 of them.
 int main(int argc, const char* argv[]) {
    double results[PAGES];
-   int i;
-   char buf;
-   int psize = getpagesize();
-   char* big_array = malloc((PAGES + 1) * 1 * psize);
-   /* Alternatively, we can try this, although I was a bit hesitant given that
-    * they each get the same thread ID...*/
+   int i, buf = 1;
 
+   // Determine the page size on the machine. Usually, this is 4kB.
+   int psize = getpagesize();
+   int* big_array = malloc((PAGES + 1) * psize);
+
+   // Verfiy that our malloc was successful.
+   if (big_array == NULL) {
+      printf("Error, malloc failed!");
+      exit(1);
+   }
+
+   // Begin on the second page allocated so we are guarenteed to fault and
+   // access pages 1 at a time, recording the time for each access.
+   int step = psize / sizeof(int);
    for (i = 0; i < PAGES; i++) {
       double start = TIMER_START;
-      big_array[psize * 1 * (i + 1)] = buf;
+      big_array[step * (i + 1)] = buf;
       double stop = TIMER_STOP;
       results[i] = stop - start;
    }

@@ -1,13 +1,6 @@
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/wait.h>
-#include<stdlib.h>
-#include<signal.h>
-#include "timers.h"
-#include "arrays.h"
-#include "output.h"
+#include"timers.h"
 
-#define RUN_COUNT 200000
+#define RUN_COUNT 10000
 
 /*
  * Creates a child process and communicates with RUN_COUNT exchanges across two
@@ -26,8 +19,9 @@ int main(int argc, char** argv) {
    // A pipe written by the child, read by the parent (child to parent).
    int c2p_pipe[2];
 
-   // This one character buffer will repeatedly be sent across the pipe.
-   char buf = 'a';
+   // This one word buffer will repeatedly be sent across the pipe.
+   int buf = 1;
+   int msg_size = sizeof(int);
 
    // Create the pipes and validate their creation.
    if (pipe(p2c_pipe) == -1 || pipe(c2p_pipe) == -1) {
@@ -50,8 +44,8 @@ int main(int argc, char** argv) {
 
       // Indefinitely respond to messages via the c2p pipe.
       while(1) {
-         read(p2c_pipe[0], &buf, 1);
-         write(c2p_pipe[1], &buf, 1);
+         read(p2c_pipe[0], &buf, msg_size);
+         write(c2p_pipe[1], &buf, msg_size);
       }
 
       // We should never get here in the child
@@ -69,8 +63,8 @@ int main(int argc, char** argv) {
    // Keep writing and waiting for a response and record each time.
    for (i = 0; i < RUN_COUNT; i++) {
       double start = TIMER_START;
-      write(p2c_pipe[1], &buf, 1);
-      read(c2p_pipe[0], &buf, 1);
+      write(p2c_pipe[1], &buf, msg_size);
+      read(c2p_pipe[0], &buf, msg_size);
       double stop = TIMER_STOP;
       result[i] = stop - start;
    }

@@ -1,8 +1,19 @@
+
+// A variety of files will need a variety of includes. I put all of them here.
+
 #include<time.h>
 #include<sys/time.h>
 #include<sys/resource.h>
 #include<sys/types.h>
 #include<unistd.h>
+#include<stdlib.h>
+#include<stdio.h>
+#include<pthread.h>
+#include<limits.h>
+#include<signal.h>
+#include"arrays.h"
+#include"output.h"
+
 
 #define CLOCKS_PER_NS 3.192903
 
