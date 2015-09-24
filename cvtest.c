@@ -52,7 +52,13 @@ int main(int argc, char** argv) {
       child_ready = 0;
       pthread_mutex_lock(&lock2);
       pthread_mutex_lock(&lock1);
-      pthread_create(&p, NULL, &waitandsignal, NULL);
+      int success = pthread_create(&p, NULL, &waitandsignal, NULL);
+      
+      // Check for error
+      if (success != 0){
+         fprintf(stderr,"Thread not created\n");
+         exit(0);
+      }
 
       // Wait for the child to be ready on the first lock to exchange.
       while (child_ready == 0)
