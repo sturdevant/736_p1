@@ -1,6 +1,6 @@
 #include"timers.h"
 
-#define RUN_COUNT 10000
+#define RUN_COUNT 10000000
 
 /*
  * Creates a child process and communicates with RUN_COUNT exchanges across two

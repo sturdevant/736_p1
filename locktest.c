@@ -1,6 +1,6 @@
 #include"timers.h"
 
-#define RUN_COUNT 10000
+#define RUN_COUNT 10000000
 
 // Initialize two locks for our threads to exchange blocking on.
 pthread_mutex_t lock1 = PTHREAD_MUTEX_INITIALIZER;
@@ -9,8 +9,11 @@ pthread_mutex_t lock2 = PTHREAD_MUTEX_INITIALIZER;
 // The child thread function, blocks on lock 1 and releases lock two once it has
 // gotten lock 1.
 void* lockandblock() {
-   pthread_mutex_lock(&lock1);
-   pthread_mutex_unlock(&lock2);
+   while(1) {
+      pthread_mutex_lock(&lock1);
+      pthread_mutex_unlock(&lock2);
+   }
+   printf("ERROR: child thread exited!\n");
    return NULL;
 }
 
@@ -22,15 +25,15 @@ int main(int argc, char** argv) {
 
    pthread_t p;
 
+   // Take locks 1 and 2 before creating a child so the child thread will
+   // block on lock 1 if it runs first and the parent will block on lock 2
+   // if it runs first. Now, a context switch is forced in the timing.
+   pthread_mutex_lock(&lock1);
+   pthread_mutex_lock(&lock2);
+   pthread_create(&p, NULL, &lockandblock, NULL);
+
    for (i = 0; i < RUN_COUNT; i++) {
       
-      // Take locks 1 and 2 before creating a child so the child thread will
-      // block on lock 1 if it runs first and the parent will block on lock 2
-      // if it runs first. Now, a context switch is forced in the timing.
-      pthread_mutex_lock(&lock1);
-      pthread_mutex_lock(&lock2);
-      pthread_create(&p, NULL, &lockandblock, NULL);
-
       // Begin timing and unlock lock 1. The child must be run before lock 2
       // can be unlocked, so this thread will be forced to wait.
       double start = TIMER_START;
@@ -44,13 +47,8 @@ int main(int argc, char** argv) {
       double stop = TIMER_STOP;
       results[i] = stop - start;
 
-      // Destroy the child thread and make a new one later.
-      pthread_join(p, NULL);
-      pthread_mutex_unlock(&lock1);
-      pthread_mutex_unlock(&lock2);
    }
 
-   printf("Min = %lf\n", array_min(results, RUN_COUNT));
-   array_to_csv(results, RUN_COUNT, "lockandblock.csv");
+   array_to_csv(results, RUN_COUNT, "locktest.csv");
    return(0);
 }
